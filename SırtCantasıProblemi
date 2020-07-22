@@ -1,0 +1,223 @@
+import MergeSort from '../../sorting/merge-sort/MergeSort';
+	
+
+	export default class Knapsack {
+	  /**
+	   * @param {KnapsackItem[]} possibleItems
+	   * @param {number} weightLimit
+	   */
+	  constructor(possibleItems, weightLimit) {
+	    this.selectedItems = [];
+	    this.weightLimit = weightLimit;
+	    this.possibleItems = possibleItems;
+	  }
+	
+
+	  sortPossibleItemsByWeight() {
+	    this.possibleItems = new MergeSort({
+	      /**
+	       * @var KnapsackItem itemA
+	       * @var KnapsackItem itemB
+	       */
+	      compareCallback: (itemA, itemB) => {
+	        if (itemA.weight === itemB.weight) {
+	          return 0;
+	        }
+	
+
+	        return itemA.weight < itemB.weight ? -1 : 1;
+	      },
+	    }).sort(this.possibleItems);
+	  }
+	
+
+	  sortPossibleItemsByValue() {
+	    this.possibleItems = new MergeSort({
+	      /**
+	       * @var KnapsackItem itemA
+	       * @var KnapsackItem itemB
+	       */
+	      compareCallback: (itemA, itemB) => {
+	        if (itemA.value === itemB.value) {
+	          return 0;
+	        }
+	
+
+	        return itemA.value > itemB.value ? -1 : 1;
+	      },
+	    }).sort(this.possibleItems);
+	  }
+	
+
+	  sortPossibleItemsByValuePerWeightRatio() {
+	    this.possibleItems = new MergeSort({
+	      /**
+	       * @var KnapsackItem itemA
+	       * @var KnapsackItem itemB
+	       */
+	      compareCallback: (itemA, itemB) => {
+	        if (itemA.valuePerWeightRatio === itemB.valuePerWeightRatio) {
+	          return 0;
+	        }
+	
+
+	        return itemA.valuePerWeightRatio > itemB.valuePerWeightRatio ? -1 : 1;
+	      },
+	    }).sort(this.possibleItems);
+	  }
+	
+
+	  // çözüm 0/1 sırt çantası problemi
+	  // Dinamik Programlama yaklaşımı.
+	  solveZeroOneKnapsackProblem() {
+	    // Eşit Ağırlıklarda iki farklı değer olduğu için iki çeşit yapıyoruz.
+	    // önce en değerli eşyaları almalıyız.
+	    this.sortPossibleItemsByValue();
+	    this.sortPossibleItemsByWeight();
+	
+
+	    this.selectedItems = [];
+	
+
+	    // sırt çantası değerleri matrisi oluşturma.
+	    const numberOfRows = this.possibleItems.length;
+	    const numberOfColumns = this.weightLimit;
+	    const knapsackMatrix = Array(numberOfRows).fill(null).map(() => {
+	      return Array(numberOfColumns + 1).fill(null);
+	    });
+	
+
+	    // İki sütunu sıfırlarla dolduruyoruz. Çünkü ağırlık sınırlandırması
+	    //sıfırsa sırt çantasına hiçbir ürün ekleyemeyiz.
+	    for (let itemIndex = 0; itemIndex < this.possibleItems.length; itemIndex += 1) {
+	      knapsackMatrix[itemIndex][0] = 0;
+	    }
+	
+
+	    // ilk satıra yalnızca ekleyerek alabileceğimiz maksimum değerleri giriyoruz.
+	    // ya da sırt çantasına ilk öğeyi eklemiyoruz.
+	    for (let weightIndex = 1; weightIndex <= this.weightLimit; weightIndex += 1) {
+	      const itemIndex = 0;
+	      const itemWeight = this.possibleItems[itemIndex].weight;
+	      const itemValue = this.possibleItems[itemIndex].value;
+	      knapsackMatrix[itemIndex][weightIndex] = itemWeight <= weightIndex ? itemValue : 0;
+	    }
+	
+
+	    // Sırt çantasına nasıl eşya eklyebiliceğimizi gözden geçiriyoruz.
+	    // Dinamik programlama kullanarak hangi ağırlığı değerleri alacağımızı
+	    // tanımlıyoruz.
+	    for (let itemIndex = 1; itemIndex < this.possibleItems.length; itemIndex += 1) {
+	      for (let weightIndex = 1; weightIndex <= this.weightLimit; weightIndex += 1) {
+	        const currentItemWeight = this.possibleItems[itemIndex].weight;
+	        const currentItemValue = this.possibleItems[itemIndex].value;
+	
+
+	        if (currentItemWeight > weightIndex) {
+	          // Maddenin ağırlığı daha büyükse şu anda izin verilen ağırlık
+	          // o zaman sırt çantasına mümkün olan maksimum değere ekleyemeyiz
+	          // şu anda kazanç, önceki öğe için elde ettiğimiz maksimum        değerdir.
+	          knapsackMatrix[itemIndex][weightIndex] = knapsackMatrix[itemIndex - 1][weightIndex];
+	        } else {
+	          // Aksi takdirde, bu noktada elde edebileceğimiz maksimum değeri, 
+	          // geçerli değer ekleyerek veya yalnızca önceki öğeyi geçerli 
+          // ağırlık için tutarak dikkate almamız gerekir.
+	          knapsackMatrix[itemIndex][weightIndex] = Math.max(
+	            currentItemValue + knapsackMatrix[itemIndex - 1][weightIndex - currentItemWeight],
+	            knapsackMatrix[itemIndex - 1][weightIndex],
+	          );
+	        }
+	      }
+	    }
+	
+
+	    // Şimdi sırt çantasına hangi öğeleri ekleyeceğimizi görmek için sırt 
+	    // çantası matrisini izleyelim.
+	    let itemIndex = this.possibleItems.length - 1;
+	    let weightIndex = this.weightLimit;
+	
+
+	    while (itemIndex > 0) {
+	      const currentItem = this.possibleItems[itemIndex];
+	      const prevItem = this.possibleItems[itemIndex - 1];
+	
+
+	      // Matris değerinin yukarıdan gelip gelmediğini kontrol edin
+	      // Bu durumda bu, seçilen öğeler listesine önceki öğeyi eklememiz 
+	      // gerektiği anlamına gelir.
+	      if (
+	        knapsackMatrix[itemIndex][weightIndex]
+	        && knapsackMatrix[itemIndex][weightIndex] === knapsackMatrix[itemIndex - 1][weightIndex]
+	      ) {
+	        // Aynı ağırlıkta ancak farklı değerlerde birden fazla öğe olup olmadığını kontrol edin.
+	        // Matriste en yüksek değeri elde etmek için mümkün olan en yüksek öğeyi eklememiz gerekir.
+	        const prevSumValue = knapsackMatrix[itemIndex - 1][weightIndex];
+	        const prevPrevSumValue = knapsackMatrix[itemIndex - 2][weightIndex];
+	        if (
+	          !prevSumValue
+	          || (prevSumValue && prevPrevSumValue !== prevSumValue)
+	        ) {
+	          this.selectedItems.push(prevItem);
+	        }
+	      } else if (knapsackMatrix[itemIndex - 1][weightIndex - currentItem.weight]) {
+	        this.selectedItems.push(prevItem);
+	        weightIndex -= currentItem.weight;
+	      }
+	
+
+	      itemIndex -= 1;
+	    }
+	  }
+	
+
+	
+
+	  // Sınırsız sırt çantası sorununun çözümü.
+	  // Açgözlü yaklaşımı.
+	  solveUnboundedKnapsackProblem() {
+	    this.sortPossibleItemsByValue();
+	    this.sortPossibleItemsByValuePerWeightRatio();
+	
+
+	    for (let itemIndex = 0; itemIndex < this.possibleItems.length; itemIndex += 1) {
+	      if (this.totalWeight < this.weightLimit) {
+	        const currentItem = this.possibleItems[itemIndex];
+	
+
+	        // Mevcut öğelerin ne kadarını sırt çantasına atabileceğimizi tespit ediyoruz.
+	        const availableWeight = this.weightLimit - this.totalWeight;
+	        const maxPossibleItemsCount = Math.floor(availableWeight / currentItem.weight);
+	
+
+	        if (maxPossibleItemsCount > currentItem.itemsInStock) {
+	          // Stokta daha fazla ürünümüz varsa, izin verilen maksimum 
+	          // sayıyı ekleyelim.
+	          currentItem.quantity = currentItem.itemsInStock;
+	        } else if (maxPossibleItemsCount) {
+	          // Stoktaki öğe sayısını belirtmediysek, sadece stoklarımızdaki 
+	          // öğeleri ekleyelim.
+	          currentItem.quantity = maxPossibleItemsCount;
+	        }
+	
+
+	        this.selectedItems.push(currentItem);
+	      }
+	    }
+	  }
+	
+
+	  get totalValue() {
+	    /** @var {KnapsackItem} item */
+	    return this.selectedItems.reduce((accumulator, item) => {
+	      return accumulator + item.totalValue;
+	    }, 0);
+	  }
+	
+
+	  get totalWeight() {
+	    /** @var {KnapsackItem} item */
+	    return this.selectedItems.reduce((accumulator, item) => {
+	      return accumulator + item.totalWeight;
+	    }, 0);
+	  }
+	}
